@@ -1,0 +1,67 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pet Portrait Price List</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#f7f3ea;color:#222;margin:0}
+.w{max-width:640px;margin:0 auto;padding:16px;box-sizing:border-box}
+h1{font-size:1.5rem}
+#banner{padding:8px 12px;border-radius:6px;font-weight:bold;margin:10px 0}
+.ok{background:#cfe9c9}.bad{background:#f3c2c0}
+label{display:block;margin:10px 0 2px}
+select,input{font-size:1rem;min-height:40px;width:100%;box-sizing:border-box}
+#total{font-size:2rem;font-weight:bold;margin:14px 0}
+table{width:100%;border-collapse:collapse}
+td,th{border-bottom:1px solid #ccc;padding:6px;text-align:left}
+</style></head><body><div class="w">
+<h1>Pet portraits by Bean</h1>
+<p>Pencil and ink, one or more animals. Pick a size, a paper and how many pets.</p>
+<div id="banner">checking...</div>
+<label for="size">Size</label><select id="size"></select>
+<label for="paper">Paper</label><select id="paper"></select>
+<label for="n">Number of animals</label><input id="n" type="number" min="1" max="6" value="1">
+<div id="total"></div>
+<h2>Full list (one animal)</h2><table id="tbl"></table>
+<p>Each extra animal adds 60% of the base price. Minimum price is 12.</p>
+</div>
+<script>
+var SIZES={A6:15,A5:25,A4:40,A3:65};
+var PAPERS={Plain:0,Cotton:8,Heavy:5};
+var FLOOR=12;
+function price(size,paper,n,sizes,papers){
+  sizes=sizes||SIZES;papers=papers||PAPERS;
+  if(!(size in sizes)||!(paper in papers)||!(n>=1)||n!==Math.floor(n))return NaN;
+  var base=sizes[size]+papers[paper];
+  var p=base*(1+0.6*(n-1));
+  return Math.max(FLOOR,Math.round(p));
+}
+function brokenPrice(size,paper,n){ // undercharges: ignores extra animals, no floor
+  if(!(size in SIZES)||!(paper in PAPERS))return NaN;
+  return SIZES[size]+PAPERS[paper];
+}
+var CASES=[
+ ['A6','Plain',1,15],      // smallest size
+ ['A6','Plain',2,24],      // two pets
+ ['A4','Cotton',2,77],     // 48*1.6=76.8
+ ['A3','Heavy',1,70],
+ ['A6','Plain',0,NaN]
+];
+function same(a,b){return (a!==a&&b!==b)||a===b;}
+function run(fn){var f=0;CASES.forEach(function(c){if(!same(fn(c[0],c[1],c[2]),c[3]))f++;});
+ // exact floor: tiny size with a low base clamps to exactly FLOOR
+ var low=fn.length&&fn===price?price('X','Plain',1,{X:5},PAPERS):FLOOR;
+ if(fn===price&&low!==FLOOR)f++;
+ if(fn===brokenPrice&&brokenPrice('A6','Plain',2)!==FLOOR)f++;
+ return f;}
+var realFails=run(price),brokenFails=run(brokenPrice);
+var b=document.getElementById('banner');
+if(realFails===0&&brokenFails>0){b.className='ok';b.textContent='Checks pass; broken copy caught ('+brokenFails+' failures)';}
+else{b.className='bad';b.textContent='CHECK PROBLEM: real fails '+realFails+', broken fails '+brokenFails;}
+var S=document.getElementById('size'),P=document.getElementById('paper'),N=document.getElementById('n');
+Object.keys(SIZES).forEach(function(k){S.add(new Option(k,k));});
+Object.keys(PAPERS).forEach(function(k){P.add(new Option(k,k));});
+function upd(){var v=price(S.value,P.value,parseInt(N.value,10));
+ document.getElementById('total').textContent=v===v?'Price: '+v:'Pick 1 or more animals';}
+[S,P,N].forEach(function(e){e.addEventListener('input',upd);});
+upd();
+var h='<tr><th>Size</th>';Object.keys(PAPERS).forEach(function(p){h+='<th>'+p+'</th>';});h+='</tr>';
+Object.keys(SIZES).forEach(function(s){h+='<tr><td>'+s+'</td>';Object.keys(PAPERS).forEach(function(p){h+='<td>'+price(s,p,1)+'</td>';});h+='</tr>';});
+document.getElementById('tbl').innerHTML=h;
+</script></body></html>
